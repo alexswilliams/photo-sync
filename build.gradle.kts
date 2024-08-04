@@ -14,6 +14,7 @@ dependencies {
     val kotlinCoroutinesVersion = "1.8.1"
     implementation("aws.sdk.kotlin:s3:$kotlinSdkVersion")
     implementation("aws.sdk.kotlin:s3control:$kotlinSdkVersion")
+    implementation("aws.smithy.kotlin:http-client-engine-okhttp:1.3.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion")
 
     runtimeOnly("org.slf4j:slf4j-simple:2.0.3")

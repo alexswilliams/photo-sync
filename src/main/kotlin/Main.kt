@@ -8,6 +8,7 @@ import aws.sdk.kotlin.services.s3.model.StorageClass
 import aws.sdk.kotlin.services.s3.paginators.listObjectsV2Paginated
 import aws.smithy.kotlin.runtime.auth.awscredentials.CachedCredentialsProvider
 import aws.smithy.kotlin.runtime.content.writeToFile
+import aws.smithy.kotlin.runtime.http.engine.okhttp.OkHttpEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
@@ -23,56 +24,55 @@ import java.nio.file.attribute.FileTime
 import java.time.Instant
 import kotlin.io.path.*
 
-fun main() {
-    val region = "eu-west-1"
-    val bucketName = "various-barbed-earthworm"
-    val prefix = "pixel6/"
-    val credentials = CachedCredentialsProvider(ProfileCredentialsProvider(profileName = "s3sync", region = region))
-
+fun main(): Unit =
     runBlocking(Dispatchers.IO) {
-        S3Client
-            .fromEnvironment { credentialsProvider = credentials; this.region = region }
-            .use { fetchNewContent(it, bucketName, prefix) }
+        S3Client.fromEnvironment {
+            credentialsProvider = CachedCredentialsProvider(ProfileCredentialsProvider(profileName = "s3sync", region = "eu-west-1"))
+            region = "eu-west-1"
+            httpClient(OkHttpEngine) {
+                maxConcurrency = 12u
+                maxConcurrencyPerHost = 12u
+            }
+        }.use { s3 ->
+            fetchNewContent(s3, "various-barbed-earthworm", "pixel6/")
+        }
     }
-}
 
 private data class FileInS3(val keyInBucket: String, val pathInArchive: Path, val pathInInbox: Path)
 
 @OptIn(ExperimentalCoroutinesApi::class)
-private suspend fun fetchNewContent(s3Client: S3Client, bucketName: String, prefix: String) {
+private suspend fun fetchNewContent(s3: S3Client, bucketName: String, prefix: String) = s3
+    .listObjectsV2Paginated {
+        this.bucket = bucketName
+        this.prefix = prefix
+    }
+    .buffer()
+    .transform { page ->
+        page.contents
+            ?.filter { it.key != null }
+            ?.filterNot { ".trashed" in (it.key ?: "") }
+            ?.filterNot { ".empty" in (it.key ?: "") }
+            ?.filterNot { ".nomedia" in (it.key ?: "") }
+            ?.forEach { item -> this.emit(item) }
+    }
+    .map {
+        val subKey = it.key!!
+        FileInS3(
+            keyInBucket = it.key!!,
+            pathInArchive = Path("/mnt/steam/photo-sync-inbox", subKey).normalize(),
+            pathInInbox = Path("/mnt/steam/Photos/Inbox From Phone", subKey).normalize()
+        )
+    }
+    .filterNot { it.pathInArchive.isHidden() }
+    .filterNot { it.pathInArchive.exists() }
+    .flatMapMerge(concurrency = 5) { file ->
+        flow {
+            saveToArchiveAndInboxOrThrow(file, s3, bucketName)
+            emit(file)
+        }
+    }
+    .count().also { println("Retrieved $it unseen files from S3") }
 
-    s3Client
-        .listObjectsV2Paginated {
-            this.bucket = bucketName
-            this.prefix = prefix
-        }
-        .buffer()
-        .transform { page ->
-            page.contents
-                ?.filter { it.key != null }
-                ?.filterNot { ".trashed" in (it.key ?: "") }
-                ?.filterNot { ".empty" in (it.key ?: "") }
-                ?.filterNot { ".nomedia" in (it.key ?: "") }
-                ?.forEach { item -> this.emit(item) }
-        }
-        .map {
-            val subKey = it.key!!
-            FileInS3(
-                keyInBucket = it.key!!,
-                pathInArchive = Path("/mnt/steam/photo-sync-inbox", subKey).normalize(),
-                pathInInbox = Path("/mnt/steam/Photos/Inbox From Phone", subKey).normalize()
-            )
-        }
-        .filterNot { it.pathInArchive.isHidden() }
-        .filterNot { it.pathInArchive.exists() }
-        .flatMapMerge(concurrency = 8) { file ->
-            flow {
-                saveToArchiveAndInboxOrThrow(file, s3Client, bucketName)
-                emit(file)
-            }
-        }
-        .count().also { println("Retrieved $it unseen files from S3") }
-}
 
 private suspend fun saveToArchiveAndInboxOrThrow(file: FileInS3, s3Client: S3Client, bucketName: String) {
     println("Fetching ${file.keyInBucket} to ${file.pathInArchive}")
