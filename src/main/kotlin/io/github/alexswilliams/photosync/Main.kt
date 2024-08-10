@@ -1,4 +1,4 @@
-package io.github.alexswilliams
+package io.github.alexswilliams.photosync
 
 import aws.sdk.kotlin.runtime.auth.credentials.ProfileCredentialsProvider
 import aws.sdk.kotlin.services.s3.S3Client

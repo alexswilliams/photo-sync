@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm") version "2.0.0"
+    application
 }
 
 group = "io.github.alexswilliams"
@@ -23,4 +24,8 @@ dependencies {
 
 kotlin {
     jvmToolchain(21)
+}
+
+application {
+    this.mainClass.set("io.github.alexswilliams.photosync.MainKt")
 }
