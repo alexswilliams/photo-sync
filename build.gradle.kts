@@ -1,5 +1,9 @@
+// https://gradle.org/releases/
+// ./gradlew wrapper --gradle-version=8.10 --distribution-type=BIN
+
 plugins {
-    kotlin("jvm") version "2.0.0"
+    // https://mvnrepository.com/artifact/org.jetbrains.kotlin.jvm/org.jetbrains.kotlin.jvm.gradle.plugin
+    kotlin("jvm") version "2.0.20"
     application
 }
 
@@ -11,14 +15,23 @@ repositories {
 }
 
 dependencies {
-    val kotlinSdkVersion = "1.3.3"
-    val kotlinCoroutinesVersion = "1.8.1"
+    // https://mvnrepository.com/artifact/aws.sdk.kotlin/s3
+    val kotlinSdkVersion = "1.3.20"
+
     implementation("aws.sdk.kotlin:s3:$kotlinSdkVersion")
     implementation("aws.sdk.kotlin:s3control:$kotlinSdkVersion")
-    implementation("aws.smithy.kotlin:http-client-engine-okhttp:1.3.2")
+
+    // https://mvnrepository.com/artifact/aws.smithy.kotlin/http-client-engine-okhttp
+    implementation("aws.smithy.kotlin:http-client-engine-okhttp:1.3.7")
+
+    // https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-core
+    val kotlinCoroutinesVersion = "1.8.1"
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion")
 
-    runtimeOnly("org.slf4j:slf4j-simple:2.0.3")
+    // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
+    runtimeOnly("org.slf4j:slf4j-simple:2.0.16")
+
+    // https://mvnrepository.com/artifact/io.github.oshai/kotlin-logging-jvm
     implementation("io.github.oshai:kotlin-logging-jvm:7.0.0")
 }
 
