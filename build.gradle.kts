@@ -1,5 +1,5 @@
 // https://gradle.org/releases/
-// ./gradlew wrapper --gradle-version=8.10 --distribution-type=BIN
+// ./gradlew wrapper --gradle-version=8.10.1 --distribution-type=BIN
 
 plugins {
     // https://mvnrepository.com/artifact/org.jetbrains.kotlin.jvm/org.jetbrains.kotlin.jvm.gradle.plugin
@@ -16,16 +16,16 @@ repositories {
 
 dependencies {
     // https://mvnrepository.com/artifact/aws.sdk.kotlin/s3
-    val kotlinSdkVersion = "1.3.20"
+    val kotlinSdkVersion = "1.3.37"
 
     implementation("aws.sdk.kotlin:s3:$kotlinSdkVersion")
     implementation("aws.sdk.kotlin:s3control:$kotlinSdkVersion")
 
     // https://mvnrepository.com/artifact/aws.smithy.kotlin/http-client-engine-okhttp
-    implementation("aws.smithy.kotlin:http-client-engine-okhttp:1.3.7")
+    implementation("aws.smithy.kotlin:http-client-engine-okhttp:1.3.12")
 
     // https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-core
-    val kotlinCoroutinesVersion = "1.8.1"
+    val kotlinCoroutinesVersion = "1.9.0"
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion")
 
     // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
