@@ -16,13 +16,13 @@ repositories {
 
 dependencies {
     // https://mvnrepository.com/artifact/aws.sdk.kotlin/s3
-    val kotlinSdkVersion = "1.4.16"
+    val kotlinSdkVersion = "1.4.26"
 
     implementation("aws.sdk.kotlin:s3:$kotlinSdkVersion")
     implementation("aws.sdk.kotlin:s3control:$kotlinSdkVersion")
 
     // https://mvnrepository.com/artifact/aws.smithy.kotlin/http-client-engine-okhttp
-    implementation("aws.smithy.kotlin:http-client-engine-okhttp:1.4.2")
+    implementation("aws.smithy.kotlin:http-client-engine-okhttp:1.4.4")
 
     // https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-core
     val kotlinCoroutinesVersion = "1.10.1"
