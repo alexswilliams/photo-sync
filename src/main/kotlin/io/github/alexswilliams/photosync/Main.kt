@@ -7,6 +7,7 @@ import aws.sdk.kotlin.services.s3.model.GetObjectRequest
 import aws.sdk.kotlin.services.s3.model.StorageClass
 import aws.sdk.kotlin.services.s3.paginators.listObjectsV2Paginated
 import aws.smithy.kotlin.runtime.auth.awscredentials.CachedCredentialsProvider
+import aws.smithy.kotlin.runtime.client.config.ResponseHttpChecksumConfig
 import aws.smithy.kotlin.runtime.content.writeToFile
 import aws.smithy.kotlin.runtime.http.engine.okhttp.OkHttpEngine
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +34,7 @@ fun main(): Unit =
                 maxConcurrency = 12u
                 maxConcurrencyPerHost = 12u
             }
+            responseChecksumValidation = ResponseHttpChecksumConfig.WHEN_REQUIRED
         }.use { s3 ->
             fetchNewContent(s3, "various-barbed-earthworm", "pixel6/")
         }
@@ -77,7 +79,7 @@ private suspend fun fetchNewContent(s3: S3Client, bucketName: String, prefix: St
 private suspend fun saveToArchiveAndInboxOrThrow(file: FileInS3, s3Client: S3Client, bucketName: String) {
     println("Fetching ${file.keyInBucket} to ${file.pathInArchive}")
     val (storageClass, metadata) = s3Client
-        .getObject(GetObjectRequest { bucket = bucketName; key = file.keyInBucket }) { obj ->
+        .getObject(GetObjectRequest { bucket = bucketName; key = file.keyInBucket; checksumMode = null }) { obj ->
             file.pathInArchive.createParentDirectories()
             obj.body?.writeToFile(file.pathInArchive) ?: throw NullPointerException("Body is null!")
             (obj.storageClass ?: StorageClass.Standard) to (obj.metadata ?: emptyMap())
