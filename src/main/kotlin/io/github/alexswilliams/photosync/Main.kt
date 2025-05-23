@@ -14,7 +14,7 @@ private suspend fun main(config: Config): Unit =
         .use { httpClientEngine ->
             S3Client.fromEnvironment {
                 credentialsProvider = config.buildCredentialsProvider()
-                region = "eu-west-1"
+                region = config.region
                 httpClient = httpClientEngine
                 responseChecksumValidation = ResponseHttpChecksumConfig.WHEN_REQUIRED
             }.use { s3Client ->
