@@ -9,6 +9,8 @@ import aws.smithy.kotlin.runtime.http.response.*
 import aws.smithy.kotlin.runtime.operation.*
 import kotlinx.coroutines.*
 import java.io.*
+import java.net.*
+import java.nio.charset.*
 import java.security.*
 import java.time.*
 import java.time.format.*
@@ -51,6 +53,8 @@ class S3Fake(val region: String, val bucketNames: List<String>) {
             .put(keyToUse, S3File(keyToUse, body, storageClass, Clock.System.now(), metadata))
     }
 
+    fun files(bucketName: String) = buckets[bucketName]?.mapValues { it.value.copy(metadata = it.value.metadata.toSortedMap()) }
+
 
     fun httpClientEngine(allowedAccessKeyIds: List<String>): CloseableHttpClientEngine {
         return object : CloseableHttpClientEngine {
@@ -87,19 +91,61 @@ class S3Fake(val region: String, val bucketNames: List<String>) {
     }
 
     private fun sleuthResponse(request: HttpRequest): HttpResponse {
-        if (request.method != HttpMethod.GET)
-            return HttpResponse(HttpStatusCode.MethodNotAllowed)
-
         val params = request.url.parameters.decodedParameters
         val bucketName = request.url.host.toString().substringBefore('.')
 
-        if (request.url.path.segments.isEmpty() && params["list-type"]?.single() == "2")
+        if (request.method == HttpMethod.GET && request.url.path.segments.isEmpty() && params["list-type"]?.single() == "2")
             return listObjectsV2(bucketName, params)
 
-        if (request.url.path.segments.isNotEmpty())
+        if (request.method == HttpMethod.GET && request.url.path.segments.isNotEmpty())
             return getObject(bucketName, request)
 
+        if (request.method == HttpMethod.PUT && request.url.path.segments.isNotEmpty() && ("x-amz-copy-source" in request.headers))
+            return copyObject(bucketName, request)
+
         return HttpResponse(HttpStatusCode.NotFound)
+    }
+
+    private fun copyObject(
+        bucketName: String,
+        request: HttpRequest,
+    ): HttpResponse {
+        val source = URLDecoder.decode(request.headers["x-amz-copy-source"]!!, StandardCharsets.UTF_8).trimStart('/')
+        val sourceBucketName = source.substringBefore('/')
+        val sourceBucket = buckets[sourceBucketName]
+        if (sourceBucket == null) {
+            println("Could not find source bucket $sourceBucketName")
+            return HttpResponse(HttpStatusCode.NotFound)
+        }
+
+        val file = sourceBucket[request.url.path.decoded]
+        if (file == null) {
+            println("File ${request.url.path.decoded} not found in bucket $bucketName")
+            return HttpResponse(HttpStatusCode.NotFound)
+        }
+
+        val storageClass = request.headers["x-amz-storage-class"]?.let { StorageClass.fromValue(it) } ?: file.storageClass
+        val metadataDirective = request.headers["x-amz-metadata-directive"]?.let { MetadataDirective.fromValue(it) } ?: MetadataDirective.Copy
+
+        val newFile = if (metadataDirective == MetadataDirective.Copy)
+            file.copy(key = '/' + request.url.path.decoded.trimStart('/'), storageClass = storageClass)
+        else {
+            val newMeta = request.headers.entries()
+                .filter { it.key.startsWith("x-amz-meta-") }
+                .associate { (k, v) -> k.substringAfter("x-amz-meta-") to v.first() }
+            file.copy(key = '/' + request.url.path.decoded.trimStart('/'), storageClass = storageClass, metadata = newMeta)
+        }
+
+        val targetBucket = buckets[bucketName]!!
+        targetBucket.put(newFile.key, newFile)
+
+        val xmlResponse = xmlDocument {
+            element("CopyObjectResult") {
+                element("ETag", '"' + newFile.etag() + '"')
+                element("LastModified", newFile.lastModified.toString())
+            }
+        }
+        return HttpResponse(HttpStatusCode.OK, body = HttpBody.fromBytes(xmlResponse))
     }
 
     private fun getObject(bucketName: String, request: HttpRequest): HttpResponse {
@@ -113,7 +159,7 @@ class S3Fake(val region: String, val bucketNames: List<String>) {
             set("ETag", file.etag())
             set("Content-Length", file.body.size.toString())
             set("Last-Modified", httpHeaderTimestamp(file.lastModified))
-            set("x-amz-storage-class", file.storageClass.toString())
+            set("x-amz-storage-class", file.storageClass.value)
             file.metadata.forEach { (k, v) -> set("x-amz-meta-$k", v) }
         }, body = HttpBody.fromBytes(file.body))
     }
@@ -155,7 +201,6 @@ class S3Fake(val region: String, val bucketNames: List<String>) {
                 element("KeyCount", min(maxFiles, matchingFiles.size).toString())
             }
         }
-
         return HttpResponse(HttpStatusCode.OK, body = HttpBody.fromBytes(xmlOutputBytes))
     }
 }
