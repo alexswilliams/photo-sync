@@ -33,6 +33,8 @@ dependencies {
 
     // https://mvnrepository.com/artifact/io.github.oshai/kotlin-logging-jvm
     implementation("io.github.oshai:kotlin-logging-jvm:7.0.7")
+
+    testImplementation(kotlin("test"))
 }
 
 kotlin {
