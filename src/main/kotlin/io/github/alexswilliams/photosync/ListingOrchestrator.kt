@@ -2,12 +2,11 @@ package io.github.alexswilliams.photosync
 
 import aws.sdk.kotlin.services.s3.*
 import aws.sdk.kotlin.services.s3.paginators.*
-import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.flow.*
 import kotlin.io.path.*
 
-@OptIn(ExperimentalCoroutinesApi::class)
+
 internal suspend fun listNewFilesAndDispatchProcessor(
     s3: S3Client,
     bucketName: String,

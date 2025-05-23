@@ -25,8 +25,7 @@ dependencies {
     implementation("aws.smithy.kotlin:http-client-engine-okhttp:1.4.16")
 
     // https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-core
-    val kotlinCoroutinesVersion = "1.10.2"
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
 
     // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
     runtimeOnly("org.slf4j:slf4j-simple:2.0.17")

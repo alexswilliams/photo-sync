@@ -9,7 +9,7 @@ fun main(): Unit = runBlocking(Dispatchers.IO) {
     main(DefaultConfig)
 }
 
-private suspend fun main(config: Config): Unit =
+internal suspend fun main(config: Config): Unit =
     config.buildHttpEngine()
         .use { httpClientEngine ->
             S3Client.fromEnvironment {
