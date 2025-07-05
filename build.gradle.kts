@@ -1,9 +1,9 @@
 // https://gradle.org/releases/
-// ./gradlew wrapper --gradle-version=8.14.2 --distribution-type=BIN
+// ./gradlew wrapper --gradle-version=8.14.3 --distribution-type=BIN
 
 plugins {
     // https://mvnrepository.com/artifact/org.jetbrains.kotlin.jvm/org.jetbrains.kotlin.jvm.gradle.plugin
-    kotlin("jvm") version "2.1.21"
+    kotlin("jvm") version "2.2.0"
     application
 }
 
@@ -16,13 +16,13 @@ repositories {
 
 dependencies {
     // https://mvnrepository.com/artifact/aws.sdk.kotlin/s3
-    val kotlinSdkVersion = "1.4.107"
+    val kotlinSdkVersion = "1.4.118"
 
     implementation("aws.sdk.kotlin:s3:$kotlinSdkVersion")
     implementation("aws.sdk.kotlin:s3control:$kotlinSdkVersion")
 
     // https://mvnrepository.com/artifact/aws.smithy.kotlin/http-client-engine-okhttp
-    implementation("aws.smithy.kotlin:http-client-engine-okhttp:1.4.18")
+    implementation("aws.smithy.kotlin:http-client-engine-okhttp:1.4.20")
 
     // https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-core
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
