@@ -34,7 +34,13 @@ class MainTest {
 
         val expectedMTime = Instant.parse("2025-02-23T09:35:00.2Z")
         val asEpochSecs = expectedMTime.toEpochMilliseconds().toBigDecimal().movePointLeft(3).stripTrailingZeros()
-        s3.addFile("some-bucket", "test-file.txt", "Some test file".toByteArray(), metadata = mapOf("mtime" to asEpochSecs.toPlainString()))
+        s3.addFile(
+            bucketName = "some-bucket",
+            key = "test-file.txt",
+            body = "Some test file".toByteArray(),
+            storageClass = StorageClass.Standard,
+            metadata = mapOf("mtime" to asEpochSecs.toPlainString())
+        )
 
         runBlocking {
             main(config)
