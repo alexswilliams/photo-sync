@@ -4,6 +4,8 @@
 plugins {
     // https://mvnrepository.com/artifact/org.jetbrains.kotlin.jvm/org.jetbrains.kotlin.jvm.gradle.plugin
     kotlin("jvm") version "2.2.0"
+    // https://github.com/graalvm/native-build-tools/releases
+    id("org.graalvm.buildtools.native") version "0.10.6"
     application
 }
 
@@ -37,9 +39,22 @@ dependencies {
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(24)
 }
 
 application {
-    this.mainClass.set("io.github.alexswilliams.photosync.MainKt")
+    mainClass.set("io.github.alexswilliams.photosync.MainKt")
+}
+
+graalvmNative {
+    binaries.all {
+        javaLauncher.set(javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(24))
+            vendor.set(JvmVendorSpec.GRAAL_VM)
+        })
+    }
+    binaries.named("main") {
+        imageName.set("photosync")
+        buildArgs.add("-march=native")
+    }
 }
