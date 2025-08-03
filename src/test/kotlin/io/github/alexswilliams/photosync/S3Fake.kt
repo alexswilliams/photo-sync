@@ -8,6 +8,7 @@ import aws.smithy.kotlin.runtime.http.request.*
 import aws.smithy.kotlin.runtime.http.response.*
 import aws.smithy.kotlin.runtime.operation.*
 import kotlinx.coroutines.*
+import org.assertj.core.api.Assertions.*
 import java.io.*
 import java.net.*
 import java.nio.charset.*
@@ -19,7 +20,6 @@ import java.util.concurrent.atomic.*
 import javax.xml.stream.*
 import kotlin.coroutines.*
 import kotlin.math.*
-import kotlin.test.*
 import kotlin.time.*
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -72,14 +72,12 @@ class S3Fake(val region: String, val bucketNames: List<String>) {
                 context: ExecutionContext,
                 request: HttpRequest,
             ): HttpCall {
-                val host = request.headers["host"]!!
-                assertEquals(request.url.host.toString(), host)
-                assertTrue { bucketNames.any { host == "$it.s3.$region.amazonaws.com" } }
-                assertEquals(443, request.url.port)
+                assertThat(request.headers["host"]).isEqualTo(request.url.host.toString())
+                assertThat(bucketNames.map { "$it.s3.$region.amazonaws.com" }).contains(request.headers["host"])
+                assertThat(request.url.port).isEqualTo(443)
                 val authorisation = request.headers["authorization"]!!
-                assertTrue { authorisation.startsWith("AWS4-HMAC-SHA256 ") }
-                assertTrue { allowedAccessKeyIds.any { authorisation.contains(it) } }
-
+                assertThat(authorisation).startsWith("AWS4-HMAC-SHA256 ")
+                assertThat(allowedAccessKeyIds).anyMatch { authorisation.contains(it) }
                 val response = sleuthResponse(request)
                 return HttpCall(
                     request,

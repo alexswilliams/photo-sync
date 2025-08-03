@@ -4,10 +4,10 @@ import aws.sdk.kotlin.runtime.auth.credentials.*
 import aws.sdk.kotlin.services.s3.model.*
 import aws.smithy.kotlin.runtime.auth.awscredentials.*
 import kotlinx.coroutines.*
-import org.junit.Test
+import org.assertj.core.api.Assertions.*
+import org.junit.jupiter.api.*
 import java.nio.file.*
 import kotlin.io.path.*
-import kotlin.test.*
 import kotlin.time.*
 
 @ExperimentalTime
@@ -48,9 +48,9 @@ class MainTest {
 
         // Then the file has been moved to Glacier-IR
         val filesInS3 = s3.files("some-bucket")!!.entries
-        assertTrue(filesInS3.size == 1)
-        assertEquals("/test-file.txt", filesInS3.single().key)
-        assertEquals(StorageClass.GlacierIr, filesInS3.single().value.storageClass)
+        assertThat(filesInS3).hasSize(1)
+        assertThat(filesInS3).singleElement().extracting { it.key }.isEqualTo("/test-file.txt")
+        assertThat(filesInS3).singleElement().extracting { it.value.storageClass }.isSameAs(StorageClass.GlacierIr)
 
 
         val filesInArchive = archiveDir.listDirectoryEntries().toList()
@@ -59,18 +59,18 @@ class MainTest {
         val fileInInbox = Path(inboxDir.toString(), "test-file.txt")
 
         // Then the files have been copied to both the archive and the inbox
-        assertContains(filesInArchive, fileInArchive)
-        assertContains(filesInInbox, fileInInbox)
-        assertEquals("Some test file", fileInArchive.readText(Charsets.UTF_8))
-        assertEquals("Some test file", fileInInbox.readText(Charsets.UTF_8))
+        assertThat(filesInArchive).contains(fileInArchive)
+        assertThat(filesInInbox).contains(fileInInbox)
+        assertThat(fileInArchive).content(Charsets.UTF_8).isEqualTo("Some test file")
+        assertThat(fileInInbox).content(Charsets.UTF_8).isEqualTo("Some test file")
 
         // Then the files in both locations have had their file system modified time set to the epoch seconds value in the S3 file's metadata
-        assertEquals(expectedMTime.toJavaInstant(), fileInArchive.getLastModifiedTime().toInstant())
-        assertEquals(expectedMTime.toJavaInstant(), fileInInbox.getLastModifiedTime().toInstant())
+        assertThat(fileInArchive.getLastModifiedTime().toInstant()).isEqualTo(expectedMTime.toJavaInstant())
+        assertThat(fileInInbox.getLastModifiedTime().toInstant()).isEqualTo(expectedMTime.toJavaInstant())
     }
 
     @OptIn(ExperimentalPathApi::class)
-    @AfterTest
+    @AfterEach
     fun teardown() {
         foldersToTearDown.forEach {
             it.deleteRecursively()
