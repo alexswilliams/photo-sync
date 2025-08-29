@@ -3,7 +3,7 @@
 
 plugins {
     // https://mvnrepository.com/artifact/org.jetbrains.kotlin.jvm/org.jetbrains.kotlin.jvm.gradle.plugin
-    kotlin("jvm") version "2.2.0"
+    kotlin("jvm") version "2.2.10"
     // https://github.com/graalvm/native-build-tools/releases
     id("org.graalvm.buildtools.native") version "0.11.0"
     application
@@ -18,13 +18,13 @@ repositories {
 
 dependencies {
     // https://mvnrepository.com/artifact/aws.sdk.kotlin/s3
-    val kotlinSdkVersion = "1.5.9"
+    val kotlinSdkVersion = "1.5.26"
 
     implementation("aws.sdk.kotlin:s3:$kotlinSdkVersion")
     implementation("aws.sdk.kotlin:s3control:$kotlinSdkVersion")
 
     // https://mvnrepository.com/artifact/aws.smithy.kotlin/http-client-engine-okhttp
-    implementation("aws.smithy.kotlin:http-client-engine-okhttp:1.5.3")
+    implementation("aws.smithy.kotlin:http-client-engine-okhttp:1.5.6")
 
     // https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-core
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
@@ -33,14 +33,14 @@ dependencies {
     runtimeOnly("org.slf4j:slf4j-simple:2.0.17")
 
     // https://mvnrepository.com/artifact/io.github.oshai/kotlin-logging-jvm
-    implementation("io.github.oshai:kotlin-logging-jvm:7.0.10")
+    implementation("io.github.oshai:kotlin-logging-jvm:7.0.13")
 
     // https://mvnrepository.com/artifact/org.junit/junit-bom
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     // https://mvnrepository.com/artifact/org.assertj/assertj-core
-    testImplementation("org.assertj:assertj-core:3.27.3")
+    testImplementation("org.assertj:assertj-core:3.27.4")
 }
 
 tasks.test {
