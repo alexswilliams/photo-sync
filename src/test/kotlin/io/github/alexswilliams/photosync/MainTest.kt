@@ -25,6 +25,7 @@ class MainTest {
             override val s3Prefix = "some-prefix/"
             override val archivePath = archiveDir.toAbsolutePath().toString()
             override val inboxPath = inboxDir.toAbsolutePath().toString()
+            override val decryptionPassword = "test-password"
             override fun buildHttpEngine() = s3.httpClientEngine(listOf("some-access-key"))
             override fun buildCredentialsProvider() = CachedCredentialsProvider(StaticCredentialsProvider {
                 accessKeyId = "some-access-key"
