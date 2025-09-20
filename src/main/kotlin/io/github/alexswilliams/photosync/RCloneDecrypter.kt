@@ -30,6 +30,7 @@ class RCloneDecrypter(password: String) : FileDecrypter {
             .onMalformedInput(REPORT)
             .onUnmappableCharacter(REPORT)
             .decode(ByteBuffer.wrap(unpadded)).toString()
+            .also { path -> if (path.any { it.isISOControl() }) throw Exception("Path contained control character") }
     }
 
     override fun decryptPathOrNull(path: String): String? = try {
