@@ -1,11 +1,16 @@
 package io.github.alexswilliams.photosync
 
+import org.bouncycastle.crypto.engines.*
 import org.bouncycastle.crypto.generators.*
+import org.bouncycastle.crypto.macs.*
+import org.bouncycastle.crypto.params.*
 import java.io.*
 import java.nio.*
 import java.nio.charset.CodingErrorAction.*
 import java.security.*
 import kotlin.io.encoding.*
+
+typealias Nonce = ByteArray
 
 class RCloneDecrypter(password: String) : FileDecrypter {
     private val dataKeyMaterial: ByteArray
@@ -43,9 +48,54 @@ class RCloneDecrypter(password: String) : FileDecrypter {
     override fun decryptFile(encryptedInput: InputStream, decryptedOutput: OutputStream) {
         if (!encryptedInput.readNBytes(8).contentEquals(MAGIC))
             throw IllegalArgumentException("Input is not an rclone-encrypted file")
-        val nonce = encryptedInput.readNBytes(24)
-        if (nonce.size != 24)
+        val nonceFromFile: Nonce = encryptedInput.readNBytes(24)
+        if (nonceFromFile.size != 24)
             throw IllegalArgumentException("Could not read nonce from file")
+
+        fun Nonce.carry(start: Int) {
+            for (i in start until size) {
+                val digit = this[i]
+                val newDigit = ((digit + 1) and 0xff).toByte()
+                this[i] = newDigit
+                if (newDigit >= digit) break
+            }
+        }
+
+        fun Nonce.inc() = carry(0)
+        fun Nonce.add(x: Long) {
+            var x = x
+            var carry: Int = 0
+            for (i in 0 until 8) {
+                val digit = this[i]
+                val xDigit = (x and 0xff).toByte()
+                x = x shl 8
+                carry = (carry + digit + xDigit) and 0xffff
+                this[i] = (carry and 0xff).toByte()
+                carry = carry shl 8
+            }
+            if (carry != 0) carry(8)
+        }
+
+        val polyMac = Poly1305()
+        val mac = encryptedInput.readNBytes(polyMac.macSize)
+        if (mac.size != polyMac.macSize) throw Exception("Expected block to contain data")
+        val salsa = XSalsa20Engine().apply {
+            init(false, ParametersWithIV(KeyParameter(dataKeyMaterial), nonceFromFile))
+        }
+        val macKey = ByteArray(32)
+        salsa.processBytes(macKey, 0, macKey.size, macKey, 0) // TODO: what?
+        polyMac.init(KeyParameter(macKey))
+        val block = encryptedInput.readNBytes(16 * 1024)
+        polyMac.update(block, 0, block.size)
+        val macCalculated = ByteArray(polyMac.macSize)
+        polyMac.doFinal(macCalculated, 0)
+        if (mac.contentEquals(macCalculated)) {
+            val decrypted = ByteArray(block.size)
+            salsa.processBytes(block, 0, block.size, decrypted, 0)
+            println(decrypted.toHexString())
+            println(decrypted.decodeToString())
+            decryptedOutput.write(decrypted)
+        } else throw Exception("MAC validation failed")
 
         TODO("Not yet implemented")
     }

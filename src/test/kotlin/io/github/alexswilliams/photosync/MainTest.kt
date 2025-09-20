@@ -79,7 +79,7 @@ class MainTest {
         assertThat(filesInInbox).contains(encryptedFileInInbox)
         assertThat(plainFileInArchive).content(Charsets.UTF_8).isEqualTo("Some test file")
         assertThat(plainFileInInbox).content(Charsets.UTF_8).isEqualTo("Some test file")
-        assertThat(encryptedFileInArchive).content(Charsets.UTF_8).isEqualTo("Some encrypted test file") // TODO
+        assertThat(encryptedFileInArchive).hasBinaryContent(this::class.java.getResource("Ta4vnIra9RpUc3zSa9LDfw")!!.readBytes())
         assertThat(encryptedFileInInbox).content(Charsets.UTF_8).isEqualTo("Some encrypted test file")
 
         // Then the files in both locations have had their file system modified time set to the epoch seconds value in the S3 file's metadata
