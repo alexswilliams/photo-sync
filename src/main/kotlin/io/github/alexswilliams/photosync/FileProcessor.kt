@@ -20,36 +20,38 @@ internal suspend fun saveFileLocally(
     s3Client: S3Client,
     bucketName: String,
     file: FileInS3,
-) {
-    println("Fetching ${file.keyInBucket} to ${file.pathInArchive}")
+) = with(file) {
+    println("Fetching $keyInBucket to $pathInArchive")
     val (storageClass, modifiedTimeEpochSecs) = s3Client.fetchToFile(bucketName, file)
 
-    println("Copying ${file.pathInArchive} to ${file.pathInInbox}")
-    if (file.decrypter == null)
-        copyToInbox(file.pathInArchive, file.pathInInbox)
+    println("Copying $pathInArchive to $pathInInbox")
+    if (decrypter == null)
+        copyToInbox(pathInArchive, pathInInbox)
     else
         try {
-            file.pathInArchive.inputStream().use { archiveFile ->
-                file.pathInInbox.outputStream().use { inboxFile ->
-                    file.decrypter.decryptFile(archiveFile, inboxFile)
+            pathInInbox.createParentDirectories()
+            pathInArchive.inputStream().use { archiveFile ->
+                pathInInbox.outputStream().use { inboxFile ->
+                    decrypter.decryptFile(archiveFile, inboxFile)
                 }
             }
         } catch (e: Exception) {
             // Remove the archive file so it gets re-downloaded and the decryption is retried
-            file.pathInArchive.deleteExisting()
+            pathInArchive.deleteExisting()
             throw e
         }
 
     modifiedTimeEpochSecs?.let { mtime ->
-        setFileModifiedTime(file.pathInInbox, mtime)
-        setFileModifiedTime(file.pathInArchive, mtime)
+        setFileModifiedTime(pathInInbox, mtime)
+        setFileModifiedTime(pathInArchive, mtime)
     }
 
     if (storageClass == StorageClass.Standard) {
-        println("Downgrading storage class for ${file.keyInBucket} to Glacier IR")
-        s3Client.changeStorageClass(bucketName, file.keyInBucket, StorageClass.GlacierIr)
+        println("Downgrading storage class for $keyInBucket to Glacier IR")
+        s3Client.changeStorageClass(bucketName, keyInBucket, StorageClass.GlacierIr)
     }
 }
+
 
 private suspend fun S3Client.fetchToFile(bucketName: String, file: FileInS3): Pair<StorageClass, BigDecimal?> =
     getObject(GetObjectRequest {

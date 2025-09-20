@@ -40,6 +40,10 @@ internal suspend fun listNewFiles(
             decrypter = decrypter
         )
     }
+    .filterNot { ".blank" in (it.pathInInbox.fileName.toString()) }
+    .filterNot { ".trashed" in (it.pathInInbox.fileName.toString()) }
+    .filterNot { ".empty" in (it.pathInInbox.fileName.toString()) }
+    .filterNot { ".nomedia" in (it.pathInInbox.fileName.toString()) }
     .filterNot { it.pathInArchive.isHidden() }
     .filterNot { it.pathInArchive.exists() }
     .toList()

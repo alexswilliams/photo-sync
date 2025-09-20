@@ -10,8 +10,6 @@ import java.nio.charset.CodingErrorAction.*
 import java.security.*
 import kotlin.io.encoding.*
 
-typealias Nonce = ByteArray
-
 class RCloneDecrypter(password: String) : FileDecrypter {
     private val dataKeyMaterial: ByteArray
     private val nameCipher: Eme.EmeCipher
@@ -48,56 +46,46 @@ class RCloneDecrypter(password: String) : FileDecrypter {
     override fun decryptFile(encryptedInput: InputStream, decryptedOutput: OutputStream) {
         if (!encryptedInput.readNBytes(8).contentEquals(MAGIC))
             throw IllegalArgumentException("Input is not an rclone-encrypted file")
-        val nonceFromFile: Nonce = encryptedInput.readNBytes(24)
-        if (nonceFromFile.size != 24)
+        val nonce = encryptedInput.readNBytes(24)
+        if (nonce.size != 24)
             throw IllegalArgumentException("Could not read nonce from file")
 
-        fun Nonce.carry(start: Int) {
-            for (i in start until size) {
+        fun ByteArray.inc() {
+            for (i in 0 until size) {
                 val digit = this[i]
-                val newDigit = ((digit + 1) and 0xff).toByte()
-                this[i] = newDigit
-                if (newDigit >= digit) break
+                this[i] = ((digit + 1) and 0xff).toByte()
+                if (this[i] >= digit) break
             }
         }
 
-        fun Nonce.inc() = carry(0)
-        fun Nonce.add(x: Long) {
-            var x = x
-            var carry: Int = 0
-            for (i in 0 until 8) {
-                val digit = this[i]
-                val xDigit = (x and 0xff).toByte()
-                x = x shl 8
-                carry = (carry + digit + xDigit) and 0xffff
-                this[i] = (carry and 0xff).toByte()
-                carry = carry shl 8
+        fun decryptBlock(nonce: ByteArray, key: ByteArray, blockPlusMac: ByteArray): ByteArray {
+            val salsa = XSalsa20Engine().apply { init(false, ParametersWithIV(KeyParameter(key), nonce)) }
+
+            val mac = blockPlusMac.sliceArray(0 until 16)
+            if (mac.size != 16) throw Exception("Expected Poly1305 MAC to be 16 bytes")
+            val block = blockPlusMac.sliceArray(16 until blockPlusMac.size)
+            if (block.isEmpty()) throw Exception("Expected block to contain data")
+
+            val macCalculated = with(Poly1305()) {
+                val macKey = ByteArray(32)
+                salsa.processBytes(macKey, 0, macKey.size, macKey, 0)
+                init(KeyParameter(macKey))
+                update(block, 0, block.size)
+                ByteArray(macSize).also { doFinal(it, 0) }
             }
-            if (carry != 0) carry(8)
+            if (!mac.contentEquals(macCalculated)) throw Exception("MAC validation failed")
+
+            // BC seems to factor in the last 32 byes of keystream generated above (it should generate 64 byte chunks) when it decrypts the ciphertext?  Perhaps they're cached internally
+            return ByteArray(block.size).also { salsa.processBytes(block, 0, block.size, it, 0) }
         }
 
-        val polyMac = Poly1305()
-        val mac = encryptedInput.readNBytes(polyMac.macSize)
-        if (mac.size != polyMac.macSize) throw Exception("Expected block to contain data")
-        val salsa = XSalsa20Engine().apply {
-            init(false, ParametersWithIV(KeyParameter(dataKeyMaterial), nonceFromFile))
-        }
-        val macKey = ByteArray(32)
-        salsa.processBytes(macKey, 0, macKey.size, macKey, 0) // TODO: what?
-        polyMac.init(KeyParameter(macKey))
-        val block = encryptedInput.readNBytes(16 * 1024)
-        polyMac.update(block, 0, block.size)
-        val macCalculated = ByteArray(polyMac.macSize)
-        polyMac.doFinal(macCalculated, 0)
-        if (mac.contentEquals(macCalculated)) {
-            val decrypted = ByteArray(block.size)
-            salsa.processBytes(block, 0, block.size, decrypted, 0)
-            println(decrypted.toHexString())
-            println(decrypted.decodeToString())
+        var block = encryptedInput.readNBytes(16 + 64 * 1024)
+        while (block.isNotEmpty()) {
+            val decrypted = decryptBlock(nonce, dataKeyMaterial, block)
             decryptedOutput.write(decrypted)
-        } else throw Exception("MAC validation failed")
-
-        TODO("Not yet implemented")
+            nonce.inc()
+            block = encryptedInput.readNBytes(16 + 64 * 1024)
+        }
     }
 
     private companion object {
@@ -115,6 +103,5 @@ class RCloneDecrypter(password: String) : FileDecrypter {
             if (padding.any { it.toInt() != padLength }) throw IllegalArgumentException("Padding is not valid, should all be the same byte value")
             return paddedInput.sliceArray(0 until (paddedInput.size - padLength))
         }
-
     }
 }
