@@ -54,7 +54,7 @@ class RCloneDecrypter(password: String) : FileDecrypter {
             for (i in 0 until size) {
                 val digit = this[i]
                 this[i] = ((digit + 1) and 0xff).toByte()
-                if (this[i] >= digit) break
+                if (this[i] != 0.toByte()) break
             }
         }
 
