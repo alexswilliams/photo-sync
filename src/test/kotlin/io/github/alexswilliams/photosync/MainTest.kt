@@ -6,6 +6,9 @@ import aws.smithy.kotlin.runtime.auth.awscredentials.*
 import kotlinx.coroutines.*
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
+import org.junit.platform.commons.support.Resource
+import org.junit.platform.commons.util.ResourceUtils
+import java.io.File
 import java.nio.file.*
 import kotlin.io.path.*
 import kotlin.time.*
@@ -25,7 +28,7 @@ class MainTest {
             override val s3Prefix = "some-prefix/"
             override val archivePath = archiveDir.toAbsolutePath().toString()
             override val inboxPath = inboxDir.toAbsolutePath().toString()
-            override val decrypters = listOf(RCryptDecrypter("kjIjoZRjnxwUN2xFTWkswdEDw3msGoPN3KVDD3LWDd8"))
+            override val decrypters = listOf(RCloneDecrypter("kjIjoZRjnxwUN2xFTWkswdEDw3msGoPN3KVDD3LWDd8"))
             override fun buildHttpEngine() = s3.httpClientEngine(listOf("some-access-key"))
             override fun buildCredentialsProvider() = CachedCredentialsProvider(StaticCredentialsProvider {
                 accessKeyId = "some-access-key"
@@ -45,7 +48,7 @@ class MainTest {
         s3.addFile(
             bucketName = "some-bucket",
             key = "Ta4vnIra9RpUc3zSa9LDfw",
-            body = "Some encrypted test file".toByteArray(), // TODO
+            body = this::class.java.getResource("Ta4vnIra9RpUc3zSa9LDfw")!!.readBytes(),
             storageClass = StorageClass.Standard,
             metadata = mapOf("mtime" to asEpochSecs.toPlainString())
         )

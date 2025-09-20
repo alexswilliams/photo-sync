@@ -19,7 +19,7 @@ class FileDecrypterTest {
             "exactly32ABCDEFGHIJKLMNOPQRSTUVW" to "MFqVXYoZFwyCtUbPXSjRXI0dMZI4zaG5PiqFsx7P9SEz2s2kteLtRdzN1XC1rsYS",
         ).map { (plain, cipher) ->
             DynamicTest.dynamicTest(plain) {
-                val filenameDecrypter = RCryptDecrypter(testPassword)
+                val filenameDecrypter = RCloneDecrypter(testPassword)
                 assertThat(filenameDecrypter.decryptNamePart(cipher)).isEqualTo(plain)
             }
         }
@@ -39,7 +39,7 @@ class FileDecrypterTest {
             "test/test2/" to "oHw4y5oZcRpis2VveUx3yg/Ta4vnIra9RpUc3zSa9LDfw/",
         ).map { (plain, cipher) ->
             DynamicTest.dynamicTest("Path: $plain") {
-                val fileDecrypter: FileDecrypter = RCryptDecrypter(testPassword)
+                val fileDecrypter: FileDecrypter = RCloneDecrypter(testPassword)
                 assertThat(fileDecrypter.decryptPathOrNull(cipher))
                     .isEqualTo(plain)
             }
@@ -47,7 +47,7 @@ class FileDecrypterTest {
 
     @Test
     fun `paths not decryptable with this key return null`() {
-        val fileDecrypter: FileDecrypter = RCryptDecrypter(testPassword)
+        val fileDecrypter: FileDecrypter = RCloneDecrypter(testPassword)
         assertThat(fileDecrypter.decryptPathOrNull("some-path"))
             .isNull()
     }

@@ -27,7 +27,7 @@ internal object DefaultConfig : Config {
     override val archivePath = "/mnt/steam/photo-sync-inbox"
     override val inboxPath = "/mnt/steam/Photos/Inbox From Phone"
     override val decrypters = listOf(
-        RCryptDecrypter(File("~/.s3encpwd").readLines().first().trim())
+        RCloneDecrypter(File("~/.s3encpwd").readLines().first().trim())
     )
 
     override fun buildCredentialsProvider() =
