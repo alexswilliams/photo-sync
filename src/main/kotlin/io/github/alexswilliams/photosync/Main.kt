@@ -18,12 +18,13 @@ internal suspend fun main(config: Config): Unit =
                 httpClient = httpClientEngine
                 responseChecksumValidation = ResponseHttpChecksumConfig.WHEN_REQUIRED
             }.use { s3Client ->
-                val files = listNewFilesAndDispatchProcessor(
+                val files = listNewFiles(
                     s3Client,
                     config.bucketName,
                     config.s3Prefix,
                     config.archivePath,
-                    config.inboxPath
+                    config.inboxPath,
+                    config.decrypters
                 )
                 println("Found ${files.size} unseen files in S3")
                 files.forEach { file ->

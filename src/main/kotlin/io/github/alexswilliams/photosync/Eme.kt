@@ -34,7 +34,7 @@ object Eme {
             val nullBlock = ByteArray(blockSize)
 
             var lastL = encrypt(nullBlock)
-            val L = Array(blockCount) { lastL.shift().also { lastL = it } }
+            val L = Array(blockCount) { lastL.rotate().also { lastL = it } }
 
             val CCC = Array(blockCount) { i -> decrypt(L[i] xor cipherText.block(i, blockSize)) }
 
@@ -44,7 +44,7 @@ object Eme {
             val M = MC xor MP
 
             var lastM = M
-            val PPP = Array(blockCount) { i -> (CCC[i] xor lastM).also { lastM = lastM.shift() } }
+            val PPP = Array(blockCount) { i -> (CCC[i] xor lastM).also { lastM = lastM.rotate() } }
             val SP = PPP.reduce { a, b -> a xor b } xor PPP[0]
             PPP[0] = MP xor SP xor tweak
 
@@ -57,7 +57,7 @@ object Eme {
     }
 
     @OptIn(ExperimentalUnsignedTypes::class)
-    private fun ByteArray.shift(): ByteArray {
+    private fun ByteArray.rotate(): ByteArray {
         if (size != 16) throw Exception("The EME paper only defined how to rotate 128-bit blocks")
         val input = this.asUByteArray()
         val output = UByteArray(size)

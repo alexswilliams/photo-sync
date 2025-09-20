@@ -1,19 +1,20 @@
 package io.github.alexswilliams.photosync
 
 import aws.sdk.kotlin.services.s3.*
-import aws.sdk.kotlin.services.s3.model.StorageClass
+import aws.sdk.kotlin.services.s3.model.*
 import aws.sdk.kotlin.services.s3.paginators.*
 import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.flow.*
 import kotlin.io.path.*
 
 
-internal suspend fun listNewFilesAndDispatchProcessor(
+internal suspend fun listNewFiles(
     s3: S3Client,
     bucketName: String,
     bucketPrefix: String,
     archivePath: String,
     inboxPath: String,
+    decrypters: List<FileDecrypter>,
 ): List<FileInS3> = s3
     .listObjectsV2Paginated {
         bucket = bucketName
@@ -31,12 +32,23 @@ internal suspend fun listNewFilesAndDispatchProcessor(
             ?.forEach { item -> this@transform.emit(item) }
     }
     .map {
+        val (decryptedFilePath, decrypter) = decrypters.decryptFilePath(it.key!!)
         FileInS3(
             keyInBucket = it.key!!,
             pathInArchive = Path(archivePath, it.key!!).normalize(),
-            pathInInbox = Path(inboxPath, it.key!!).normalize()
+            pathInInbox = Path(inboxPath, decryptedFilePath).normalize(),
+            decrypter = decrypter
         )
     }
     .filterNot { it.pathInArchive.isHidden() }
     .filterNot { it.pathInArchive.exists() }
     .toList()
+
+fun List<FileDecrypter>.decryptFilePath(key: String): Pair<String, FileDecrypter?> {
+    this.forEach { fileDecrypter ->
+        fileDecrypter.decryptPathOrNull(key)?.let {
+            return it to fileDecrypter
+        }
+    }
+    return key to null
+}

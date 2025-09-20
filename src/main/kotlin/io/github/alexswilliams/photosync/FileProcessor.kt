@@ -14,7 +14,7 @@ import java.time.*
 import kotlin.io.path.*
 
 
-internal data class FileInS3(val keyInBucket: String, val pathInArchive: Path, val pathInInbox: Path)
+internal data class FileInS3(val keyInBucket: String, val pathInArchive: Path, val pathInInbox: Path, val decrypter: FileDecrypter?)
 
 internal suspend fun saveFileLocally(
     s3Client: S3Client,
@@ -25,7 +25,20 @@ internal suspend fun saveFileLocally(
     val (storageClass, modifiedTimeEpochSecs) = s3Client.fetchToFile(bucketName, file)
 
     println("Copying ${file.pathInArchive} to ${file.pathInInbox}")
-    copyToInbox(file.pathInArchive, file.pathInInbox)
+    if (file.decrypter == null)
+        copyToInbox(file.pathInArchive, file.pathInInbox)
+    else
+        try {
+            file.pathInArchive.inputStream().use { archiveFile ->
+                file.pathInInbox.outputStream().use { inboxFile ->
+                    file.decrypter.decryptFile(archiveFile, inboxFile)
+                }
+            }
+        } catch (e: Exception) {
+            // Remove the archive file so it gets re-downloaded and the decryption is retried
+            file.pathInArchive.deleteExisting()
+            throw e
+        }
 
     modifiedTimeEpochSecs?.let { mtime ->
         setFileModifiedTime(file.pathInInbox, mtime)

@@ -1,13 +1,22 @@
 package io.github.alexswilliams.photosync
 
 import org.bouncycastle.crypto.generators.*
+import java.io.*
 import java.security.*
 import kotlin.io.encoding.*
 
 private val RCLONE_DEFAULT_SALT = byteArrayOf(0xA8, 0x0D, 0xF4, 0x3A, 0x8F, 0xBD, 0x03, 0x08, 0xA7, 0xCA, 0xB8, 0x3E, 0x58, 0x1F, 0x86, 0xB1)
 fun byteArrayOf(vararg elements: Int) = ByteArray(elements.size) { elements[it].toByte() }
 
-class Decrypter(password: String) {
+interface FileDecrypter {
+    fun decryptPathOrNull(path: String): String?
+
+    fun decryptFile(encryptedInput: InputStream, decryptedOutput: OutputStream) {
+        TODO()
+    }
+}
+
+class RCryptDecrypter(password: String) : FileDecrypter {
     private val dataKeyMaterial: ByteArray
     private val nameCipher: Eme.EmeCipher
 
@@ -29,7 +38,14 @@ class Decrypter(password: String) {
             .decodeToString()
     }
 
-    companion object {
+    override fun decryptPathOrNull(path: String): String? = try {
+        path.split('/')
+            .joinToString(File.separator) { if (it.isEmpty()) "" else decryptNamePart(it) }
+    } catch (_: Exception) {
+        null
+    }
+
+    private companion object {
         private fun pkcs7UnPad(paddedInput: ByteArray): ByteArray {
             val padLength = paddedInput.last().toInt()
             if (paddedInput.size < padLength) throw IllegalArgumentException("Input is too short to contain declared amount of padding")

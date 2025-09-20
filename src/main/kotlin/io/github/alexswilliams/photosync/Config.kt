@@ -5,7 +5,7 @@ import aws.smithy.kotlin.runtime.auth.awscredentials.*
 import aws.smithy.kotlin.runtime.http.engine.*
 import aws.smithy.kotlin.runtime.http.engine.okhttp.*
 import aws.smithy.kotlin.runtime.net.*
-import java.io.File
+import java.io.*
 import kotlin.time.Duration.Companion.seconds
 
 
@@ -15,7 +15,7 @@ interface Config {
     val s3Prefix: String
     val archivePath: String
     val inboxPath: String
-    val decryptionPassword: String
+    val decrypters: List<FileDecrypter>
     fun buildCredentialsProvider(): CloseableCredentialsProvider
     fun buildHttpEngine(): CloseableHttpClientEngine
 }
@@ -26,7 +26,9 @@ internal object DefaultConfig : Config {
     override val s3Prefix = "pixel6/"
     override val archivePath = "/mnt/steam/photo-sync-inbox"
     override val inboxPath = "/mnt/steam/Photos/Inbox From Phone"
-    override val decryptionPassword = File("~/.s3encpwd").readLines().first().trim()
+    override val decrypters = listOf(
+        RCryptDecrypter(File("~/.s3encpwd").readLines().first().trim())
+    )
 
     override fun buildCredentialsProvider() =
         CachedCredentialsProvider(ProfileCredentialsProvider(profileName = "s3sync", region = region))
