@@ -7,15 +7,15 @@ import kotlinx.coroutines.*
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
 import java.nio.file.*
+import java.time.*
 import kotlin.io.path.*
-import kotlin.time.*
 
-@ExperimentalTime
 class MainTest {
     val foldersToTearDown = mutableListOf<Path>()
 
     @Test
     fun test() {
+        val clock = InstantSource.fixed(Instant.parse("2025-02-24T01:05:00.123Z"))
         val archiveDir: Path = createTempDirectory("archive").also { foldersToTearDown.add(it) }
         val inboxDir: Path = createTempDirectory("inbox").also { foldersToTearDown.add(it) }
         val s3 = S3Fake("some-region", listOf("some-bucket"))
@@ -34,12 +34,20 @@ class MainTest {
         }
 
         val expectedMTime = Instant.parse("2025-02-23T09:35:00.2Z")
-        val asEpochSecs = expectedMTime.toEpochMilliseconds().toBigDecimal().movePointLeft(3).stripTrailingZeros()
+        val asEpochSecs = expectedMTime.toEpochMilli().toBigDecimal().movePointLeft(3).stripTrailingZeros()
         s3.addFile(
             bucketName = "some-bucket",
             key = "test-file.txt",
             body = "Some test file".toByteArray(),
             storageClass = StorageClass.Standard,
+            metadata = mapOf("mtime" to asEpochSecs.toPlainString())
+        )
+        s3.addFile(
+            bucketName = "some-bucket",
+            key = "test-file-will-be-filtered.txt",
+            body = "Some test file to be filtered".toByteArray(),
+            storageClass = StorageClass.Standard,
+            createdAt = Instant.parse("2024-11-22T00:00:00.00Z"), // 3 months previous
             metadata = mapOf("mtime" to asEpochSecs.toPlainString())
         )
         s3.addFile(
@@ -51,19 +59,23 @@ class MainTest {
         )
 
         runBlocking {
-            main(config)
+            main(config, clock)
         }
 
-        // Then the file has been moved to Glacier-IR
         val filesInS3 = s3.files("some-bucket")!!.entries
-        assertThat(filesInS3).hasSize(2)
-        assertThat(filesInS3.map { it.key }).contains("/test-file.txt")
-        assertThat(filesInS3.map { it.key }).contains("/Ta4vnIra9RpUc3zSa9LDfw")
-        assertThat(filesInS3.map { it.value.storageClass }).allSatisfy { assertThat(it).isSameAs(StorageClass.GlacierIr) }
+        assertThat(filesInS3)
+            .describedAs("The old entry exists within S3")
+            .hasSize(3)
+        assertThat(filesInS3.map { it.key })
+            .contains("/test-file.txt", "/Ta4vnIra9RpUc3zSa9LDfw")
+        assertThat(filesInS3.filterNot { it.key == "/test-file-will-be-filtered.txt" }.map { it.value.storageClass })
+            .describedAs("All recent files are moved to Glacier-IR")
+            .allSatisfy { assertThat(it).isSameAs(StorageClass.GlacierIr) }
 
 
         val filesInArchive = archiveDir.listDirectoryEntries().toList()
         val filesInInbox = inboxDir.listDirectoryEntries().toList()
+        assertThat(filesInArchive).describedAs("The old entry has not been copied to the local system").hasSize(2)
         val plainFileInArchive = Path(archiveDir.toString(), "test-file.txt")
         val plainFileInInbox = Path(inboxDir.toString(), "test-file.txt")
         val encryptedFileInArchive = Path(archiveDir.toString(), "Ta4vnIra9RpUc3zSa9LDfw")
@@ -80,10 +92,10 @@ class MainTest {
         assertThat(encryptedFileInInbox).content(Charsets.UTF_8).isEqualTo("Some encrypted test file")
 
         // Then the files in both locations have had their file system modified time set to the epoch seconds value in the S3 file's metadata
-        assertThat(plainFileInArchive.getLastModifiedTime().toInstant()).isEqualTo(expectedMTime.toJavaInstant())
-        assertThat(plainFileInInbox.getLastModifiedTime().toInstant()).isEqualTo(expectedMTime.toJavaInstant())
-        assertThat(encryptedFileInArchive.getLastModifiedTime().toInstant()).isEqualTo(expectedMTime.toJavaInstant())
-        assertThat(encryptedFileInInbox.getLastModifiedTime().toInstant()).isEqualTo(expectedMTime.toJavaInstant())
+        assertThat(plainFileInArchive.getLastModifiedTime().toInstant()).isEqualTo(expectedMTime)
+        assertThat(plainFileInInbox.getLastModifiedTime().toInstant()).isEqualTo(expectedMTime)
+        assertThat(encryptedFileInArchive.getLastModifiedTime().toInstant()).isEqualTo(expectedMTime)
+        assertThat(encryptedFileInInbox.getLastModifiedTime().toInstant()).isEqualTo(expectedMTime)
     }
 
     @OptIn(ExperimentalPathApi::class)

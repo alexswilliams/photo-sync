@@ -3,13 +3,14 @@ package io.github.alexswilliams.photosync
 import aws.sdk.kotlin.services.s3.*
 import aws.smithy.kotlin.runtime.client.config.*
 import kotlinx.coroutines.*
+import java.time.*
 
 
 fun main(): Unit = runBlocking(Dispatchers.IO) {
-    main(DefaultConfig)
+    main(DefaultConfig, InstantSource.system())
 }
 
-internal suspend fun main(config: Config): Unit =
+internal suspend fun main(config: Config, clock: InstantSource): Unit =
     config.buildHttpEngine()
         .use { httpClientEngine ->
             S3Client.fromEnvironment {
@@ -19,6 +20,7 @@ internal suspend fun main(config: Config): Unit =
                 responseChecksumValidation = ResponseHttpChecksumConfig.WHEN_REQUIRED
             }.use { s3Client ->
                 val files = listNewFiles(
+                    clock,
                     s3Client,
                     config.bucketName,
                     config.s3Prefix,

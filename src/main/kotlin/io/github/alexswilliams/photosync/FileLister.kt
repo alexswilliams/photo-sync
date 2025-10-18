@@ -3,12 +3,17 @@ package io.github.alexswilliams.photosync
 import aws.sdk.kotlin.services.s3.*
 import aws.sdk.kotlin.services.s3.model.*
 import aws.sdk.kotlin.services.s3.paginators.*
+import aws.smithy.kotlin.runtime.time.*
 import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.flow.*
+import java.time.*
 import kotlin.io.path.*
 
 
+private val LONDON = ZoneId.of("Europe/London")
+
 internal suspend fun listNewFiles(
+    clock: InstantSource,
     s3: S3Client,
     bucketName: String,
     bucketPrefix: String,
@@ -29,6 +34,11 @@ internal suspend fun listNewFiles(
             ?.filterNot { ".trashed" in (it.key!!) }
             ?.filterNot { ".empty" in (it.key!!) }
             ?.filterNot { ".nomedia" in (it.key!!) }
+            ?.filter {
+                it.lastModified == null ||
+                        LocalDate.ofInstant(it.lastModified!!.toJvmInstant(), LONDON)
+                            .isAfter(LocalDate.ofInstant(clock.instant(), LONDON).minusMonths(3))
+            }
             ?.forEach { item -> this@transform.emit(item) }
     }
     .map {

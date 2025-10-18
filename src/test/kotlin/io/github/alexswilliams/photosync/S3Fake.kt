@@ -20,11 +20,8 @@ import java.util.concurrent.atomic.*
 import javax.xml.stream.*
 import kotlin.coroutines.*
 import kotlin.math.*
-import kotlin.time.*
-import kotlin.time.Clock
-import kotlin.time.Instant
 
-@OptIn(ExperimentalStdlibApi::class, ExperimentalTime::class)
+@OptIn(ExperimentalStdlibApi::class)
 class S3Fake(val region: String, val bucketNames: List<String>) {
 
     data class S3File(
@@ -47,10 +44,11 @@ class S3Fake(val region: String, val bucketNames: List<String>) {
         body: ByteArray,
         storageClass: StorageClass = StorageClass.Standard,
         metadata: Map<String, String> = emptyMap(),
+        createdAt: Instant = Instant.now(),
     ) {
         val keyToUse = '/' + key.trimStart('/')
         buckets.getOrPut(bucketName) { TreeMap() }[keyToUse] =
-            S3File(keyToUse, body, storageClass, Clock.System.now(), metadata)
+            S3File(keyToUse, body, storageClass, createdAt, metadata)
     }
 
     fun files(bucketName: String) = buckets[bucketName]?.mapValues { it.value.copy(metadata = it.value.metadata.toSortedMap()) }
@@ -134,8 +132,7 @@ class S3Fake(val region: String, val bucketNames: List<String>) {
             file.copy(key = '/' + request.url.path.decoded.trimStart('/'), storageClass = storageClass, metadata = newMeta)
         }
 
-        val targetBucket = buckets[bucketName]!!
-        targetBucket.put(newFile.key, newFile)
+        buckets[bucketName]!![newFile.key] = newFile
 
         val xmlResponse = xmlDocument {
             element("CopyObjectResult") {
@@ -183,7 +180,7 @@ class S3Fake(val region: String, val bucketNames: List<String>) {
                         element("ChecksumType", ChecksumType.FullObject.value)
                         element("ETag", '"' + it.etag() + '"')
                         element("Key", it.key.trimStart('/'))
-                        element("LastModified", it.lastModified.toJavaInstant().toString())
+                        element("LastModified", it.lastModified.toString())
                         element("Size", it.body.size.toString())
                         element("StorageClass", it.storageClass.value)
                     }
@@ -203,9 +200,8 @@ class S3Fake(val region: String, val bucketNames: List<String>) {
     }
 }
 
-@OptIn(ExperimentalTime::class)
 private fun httpHeaderTimestamp(instant: Instant): String =
-    DateTimeFormatter.RFC_1123_DATE_TIME.format(OffsetDateTime.ofInstant(instant.toJavaInstant(), ZoneOffset.UTC))
+    DateTimeFormatter.RFC_1123_DATE_TIME.format(OffsetDateTime.ofInstant(instant, ZoneOffset.UTC))
 
 val xmlFactory: XMLOutputFactory = XMLOutputFactory.newInstance()
 private fun xmlDocument(children: XMLStreamWriter.() -> Unit): ByteArray {
