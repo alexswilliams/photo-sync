@@ -49,8 +49,8 @@ class S3Fake(val region: String, val bucketNames: List<String>) {
         metadata: Map<String, String> = emptyMap(),
     ) {
         val keyToUse = '/' + key.trimStart('/')
-        buckets.getOrPut(bucketName) { TreeMap() }
-            .put(keyToUse, S3File(keyToUse, body, storageClass, Clock.System.now(), metadata))
+        buckets.getOrPut(bucketName) { TreeMap() }[keyToUse] =
+            S3File(keyToUse, body, storageClass, Clock.System.now(), metadata)
     }
 
     fun files(bucketName: String) = buckets[bucketName]?.mapValues { it.value.copy(metadata = it.value.metadata.toSortedMap()) }

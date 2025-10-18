@@ -6,9 +6,6 @@ import aws.smithy.kotlin.runtime.auth.awscredentials.*
 import kotlinx.coroutines.*
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
-import org.junit.platform.commons.support.Resource
-import org.junit.platform.commons.util.ResourceUtils
-import java.io.File
 import java.nio.file.*
 import kotlin.io.path.*
 import kotlin.time.*
