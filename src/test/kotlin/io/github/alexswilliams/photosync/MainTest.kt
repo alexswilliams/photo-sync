@@ -98,6 +98,85 @@ class MainTest {
         assertThat(encryptedFileInInbox.getLastModifiedTime().toInstant()).isEqualTo(expectedMTime)
     }
 
+    @Test
+    fun testDeletion() {
+        var clock = InstantSource.fixed(Instant.parse("2025-02-24T01:05:00.123Z"))
+        val archiveDir: Path = createTempDirectory("archive").also { foldersToTearDown.add(it) }
+        val inboxDir: Path = createTempDirectory("inbox").also { foldersToTearDown.add(it) }
+        val s3 = S3Fake("some-region", listOf("some-bucket"))
+        val config: Config = object : Config {
+            override val region = "some-region"
+            override val bucketName = "some-bucket"
+            override val s3Prefix = "some-prefix/"
+            override val archivePath = archiveDir.toAbsolutePath().toString()
+            override val inboxPath = inboxDir.toAbsolutePath().toString()
+            override val decrypters = listOf(RCloneDecrypter("kjIjoZRjnxwUN2xFTWkswdEDw3msGoPN3KVDD3LWDd8"))
+            override fun buildHttpEngine() = s3.httpClientEngine(listOf("some-access-key"))
+            override fun buildCredentialsProvider() = CachedCredentialsProvider(StaticCredentialsProvider {
+                accessKeyId = "some-access-key"
+                secretAccessKey = "some-secret-access-key"
+            })
+        }
+
+        val expectedMTime = Instant.parse("2025-02-23T09:35:00.2Z")
+        val asEpochSecs = expectedMTime.toEpochMilli().toBigDecimal().movePointLeft(3).stripTrailingZeros()
+        s3.addFile(
+            bucketName = "some-bucket",
+            key = "test-file.txt",
+            body = "Some test file".toByteArray(),
+            storageClass = StorageClass.Standard,
+            metadata = mapOf("mtime" to asEpochSecs.toPlainString())
+        )
+        s3.addFile(
+            bucketName = "some-bucket",
+            key = "test-file-will-be-filtered.txt",
+            body = "Some test file to be filtered".toByteArray(),
+            storageClass = StorageClass.Standard,
+            createdAt = Instant.parse("2024-11-22T00:00:00.00Z"), // 3 months previous
+            metadata = mapOf("mtime" to asEpochSecs.toPlainString())
+        )
+        s3.addFile(
+            bucketName = "some-bucket",
+            key = "Ta4vnIra9RpUc3zSa9LDfw",
+            body = this::class.java.getResource("Ta4vnIra9RpUc3zSa9LDfw")!!.readBytes(),
+            storageClass = StorageClass.Standard,
+            metadata = mapOf("mtime" to asEpochSecs.toPlainString())
+        )
+
+        runBlocking {
+            main(config, clock)
+        }
+
+
+        var filesInArchive = archiveDir.listDirectoryEntries().toList()
+        var filesInInbox = inboxDir.listDirectoryEntries().toList()
+        assertThat(filesInArchive).describedAs("The old entry has not been copied to the local system").hasSize(2)
+        val plainFileInArchive = Path(archiveDir.toString(), "test-file.txt")
+        val plainFileInInbox = Path(inboxDir.toString(), "test-file.txt")
+        val encryptedFileInArchive = Path(archiveDir.toString(), "Ta4vnIra9RpUc3zSa9LDfw")
+        val encryptedFileInInbox = Path(inboxDir.toString(), "test2")
+
+        // Then the files have been copied to both the archive and the inbox
+        assertThat(filesInArchive).contains(plainFileInArchive)
+        assertThat(filesInInbox).contains(plainFileInInbox)
+        assertThat(filesInArchive).contains(encryptedFileInArchive)
+        assertThat(filesInInbox).contains(encryptedFileInInbox)
+
+        // When the job is run in the future
+        clock = InstantSource.fixed(Instant.parse("2026-02-24T01:05:00.123Z"))
+        runBlocking {
+            main(config, clock)
+        }
+
+        // Then the files have been deleted only from the archive, but still remain in the inbox
+        filesInArchive = archiveDir.listDirectoryEntries().toList()
+        filesInInbox = inboxDir.listDirectoryEntries().toList()
+        assertThat(filesInArchive).doesNotContain(plainFileInArchive)
+        assertThat(filesInInbox).contains(plainFileInInbox)
+        assertThat(filesInArchive).doesNotContain(encryptedFileInArchive)
+        assertThat(filesInInbox).contains(encryptedFileInInbox)
+    }
+
     @OptIn(ExperimentalPathApi::class)
     @AfterEach
     fun teardown() {

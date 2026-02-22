@@ -10,8 +10,6 @@ import java.time.*
 import kotlin.io.path.*
 
 
-private val LONDON = ZoneId.of("Europe/London")
-
 internal suspend fun listNewFiles(
     clock: InstantSource,
     s3: S3Client,
@@ -28,17 +26,20 @@ internal suspend fun listNewFiles(
     .buffer(capacity = 1, onBufferOverflow = BufferOverflow.SUSPEND)
     .transform { page ->
         page.contents
+            ?.asSequence()
             ?.filterNot { it.key == null }
             ?.filterNot { it.size == 0L }
             ?.filterNot { it.storageClass == StorageClass.GlacierIr }
             ?.filterNot { ".trashed" in (it.key!!) }
             ?.filterNot { ".empty" in (it.key!!) }
             ?.filterNot { ".nomedia" in (it.key!!) }
+            ?.filterNot { ".thumbnail" in (it.key!!) }
             ?.filter {
                 it.lastModified == null ||
                         LocalDate.ofInstant(it.lastModified!!.toJvmInstant(), LONDON)
                             .isAfter(LocalDate.ofInstant(clock.instant(), LONDON).minusMonths(3))
             }
+            ?.toList()
             ?.forEach { item -> this@transform.emit(item) }
     }
     .map {
@@ -54,6 +55,7 @@ internal suspend fun listNewFiles(
     .filterNot { ".trashed" in (it.pathInInbox.fileName.toString()) }
     .filterNot { ".empty" in (it.pathInInbox.fileName.toString()) }
     .filterNot { ".nomedia" in (it.pathInInbox.fileName.toString()) }
+    .filterNot { ".thumbnail" in (it.pathInInbox.fileName.toString()) }
     .filterNot { it.pathInArchive.isHidden() }
     .filterNot { it.pathInArchive.exists() }
     .toList()

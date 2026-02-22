@@ -24,7 +24,7 @@ internal object DefaultConfig : Config {
     override val region = "eu-west-1"
     override val bucketName = "various-barbed-earthworm"
     override val s3Prefix = "9C_jq0un2mKEPAK9JZpDEw/"
-    override val archivePath = "/mnt/steam/photo-sync-inbox"
+    override val archivePath = "/mnt/steam/photo-sync-inbox/files"
     override val inboxPath = "/mnt/steam/Photos/Inbox From Phone"
     override val decrypters = listOf(
         RCloneDecrypter(

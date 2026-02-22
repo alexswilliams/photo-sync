@@ -5,12 +5,13 @@ import aws.smithy.kotlin.runtime.client.config.*
 import kotlinx.coroutines.*
 import java.time.*
 
+val LONDON: ZoneId = ZoneId.of("Europe/London")
 
 fun main(): Unit = runBlocking(Dispatchers.IO) {
     main(DefaultConfig, InstantSource.system())
 }
 
-internal suspend fun main(config: Config, clock: InstantSource): Unit =
+internal suspend fun main(config: Config, clock: InstantSource): Unit {
     config.buildHttpEngine()
         .use { httpClientEngine ->
             S3Client.fromEnvironment {
@@ -34,3 +35,5 @@ internal suspend fun main(config: Config, clock: InstantSource): Unit =
                 }
             }
         }
+    removeOldFilesFromArchive(config.archivePath, clock)
+}

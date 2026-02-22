@@ -1,9 +1,9 @@
 // https://gradle.org/releases/
-// ./gradlew wrapper --gradle-version=9.3.0 --distribution-type=BIN  && ./gradlew wrapper
+// ./gradlew wrapper --gradle-version=9.3.1 --distribution-type=BIN  && ./gradlew wrapper
 
 plugins {
     // https://mvnrepository.com/artifact/org.jetbrains.kotlin.jvm/org.jetbrains.kotlin.jvm.gradle.plugin
-    kotlin("jvm") version "2.3.0"
+    kotlin("jvm") version "2.2.21"
     // https://github.com/graalvm/native-build-tools/releases
     id("org.graalvm.buildtools.native") version "0.11.4"
     application
@@ -18,13 +18,13 @@ repositories {
 
 dependencies {
     // https://mvnrepository.com/artifact/aws.sdk.kotlin/s3
-    val kotlinSdkVersion = "1.6.4"
+    val kotlinSdkVersion = "1.6.21"
 
     implementation("aws.sdk.kotlin:s3:$kotlinSdkVersion")
     implementation("aws.sdk.kotlin:s3control:$kotlinSdkVersion")
 
     // https://mvnrepository.com/artifact/aws.smithy.kotlin/http-client-engine-okhttp
-    implementation("aws.smithy.kotlin:http-client-engine-okhttp:1.6.0")
+    implementation("aws.smithy.kotlin:http-client-engine-okhttp:1.6.4")
 
     // https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-core
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
@@ -39,11 +39,11 @@ dependencies {
     implementation("org.bouncycastle:bcprov-jdk18on:1.83")
 
     // https://mvnrepository.com/artifact/org.junit/junit-bom
-    testImplementation(platform("org.junit:junit-bom:6.0.2"))
+    testImplementation(platform("org.junit:junit-bom:6.0.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     // https://mvnrepository.com/artifact/org.assertj/assertj-core
-    testImplementation("org.assertj:assertj-core:3.27.7")
+    testImplementation("org.assertj:assertj-core:4.0.0-M1")
 }
 
 tasks.test {

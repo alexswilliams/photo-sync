@@ -22,7 +22,7 @@ internal suspend fun saveFileLocally(
     file: FileInS3,
 ) = with(file) {
     println("Fetching $keyInBucket to $pathInArchive")
-    val (storageClass, modifiedTimeEpochSecs) = s3Client.fetchToFile(bucketName, file)
+    val (storageClass, modifiedTimeEpochSecs) = s3Client.fetchToFile(bucketName, file.pathInArchive, file.keyInBucket)
 
     println("Copying $pathInArchive to $pathInInbox")
     if (decrypter == null)
@@ -53,14 +53,14 @@ internal suspend fun saveFileLocally(
 }
 
 
-private suspend fun S3Client.fetchToFile(bucketName: String, file: FileInS3): Pair<StorageClass, BigDecimal?> =
+private suspend fun S3Client.fetchToFile(bucketName: String, pathInArchive: Path, keyInBucket: String): Pair<StorageClass, BigDecimal?> =
     getObject(GetObjectRequest {
         bucket = bucketName
-        key = file.keyInBucket
+        key = keyInBucket
         checksumMode = null
     }) { obj ->
-        file.pathInArchive.createParentDirectories()
-        obj.body?.writeToFile(file.pathInArchive) ?: throw NullPointerException("Body is null!")
+        pathInArchive.createParentDirectories()
+        obj.body?.writeToFile(pathInArchive) ?: throw NullPointerException("Body is null!")
         (obj.storageClass ?: StorageClass.Standard) to (obj.metadata?.get("mtime")?.toBigDecimalOrNull())
     }
 
