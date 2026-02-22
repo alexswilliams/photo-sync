@@ -6,7 +6,7 @@ import kotlin.io.path.*
 import kotlin.streams.*
 
 fun removeOldFilesFromArchive(archivePath: String, clock: InstantSource) {
-    val cutOffInstant = LocalDate.ofInstant(clock.instant(), LONDON).minusMonths(3).atStartOfDay().atZone(LONDON).toInstant()
+    val cutOffInstant = LocalDate.ofInstant(clock.instant(), LONDON).minusMonths(6).atStartOfDay().atZone(LONDON).toInstant()
     val filesToDelete: List<Path> = Files.walk(Path(archivePath)).asSequence()
         .filter { it.isRegularFile() }
         .filter { it.getLastModifiedTime().toInstant().isBefore(cutOffInstant) }
@@ -18,13 +18,16 @@ fun removeOldFilesFromArchive(archivePath: String, clock: InstantSource) {
         it.deleteExisting()
     }
 
-    val foldersToDelete: List<Path> = Files.walk(Path(archivePath)).asSequence()
-        .filter { it.isDirectory() }
-        .filterNot { it.toAbsolutePath().equals(Path(archivePath).absolute()) }
-        .filter { Files.list(it.toAbsolutePath()).use { files -> files.findFirst().isEmpty } }
-        .toList()
-    foldersToDelete.forEach {
-        println("Deleting $it as it is empty")
-        it.deleteExisting()
+    while (true) {
+        val foldersToDelete: List<Path> = Files.walk(Path(archivePath)).asSequence()
+            .filter { it.isDirectory() }
+            .filterNot { it.toAbsolutePath().equals(Path(archivePath).absolute()) }
+            .filter { Files.list(it.toAbsolutePath()).use { files -> files.findFirst().isEmpty } }
+            .toList()
+        foldersToDelete.forEach {
+            println("Deleting $it as it is empty")
+            it.deleteExisting()
+        }
+        if (foldersToDelete.isEmpty()) return
     }
 }

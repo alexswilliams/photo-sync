@@ -25,6 +25,7 @@ internal suspend fun listNewFiles(
     }
     .buffer(capacity = 1, onBufferOverflow = BufferOverflow.SUSPEND)
     .transform { page ->
+        val cutOffDate = LocalDate.ofInstant(clock.instant(), LONDON).minusMonths(3).atStartOfDay().atZone(LONDON).toInstant()
         page.contents
             ?.asSequence()
             ?.filterNot { it.key == null }
@@ -36,8 +37,7 @@ internal suspend fun listNewFiles(
             ?.filterNot { ".thumbnail" in (it.key!!) }
             ?.filter {
                 it.lastModified == null ||
-                        LocalDate.ofInstant(it.lastModified!!.toJvmInstant(), LONDON)
-                            .isAfter(LocalDate.ofInstant(clock.instant(), LONDON).minusMonths(3))
+                        it.lastModified!!.toJvmInstant().isAfter(cutOffDate)
             }
             ?.toList()
             ?.forEach { item -> this@transform.emit(item) }
