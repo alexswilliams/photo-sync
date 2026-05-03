@@ -1,11 +1,11 @@
 // https://gradle.org/releases/
-// ./gradlew wrapper --gradle-version=9.3.1 --distribution-type=BIN  && ./gradlew wrapper
+// ./gradlew wrapper --gradle-version=9.5.0 --distribution-type=BIN  && ./gradlew wrapper
 
 plugins {
     // https://mvnrepository.com/artifact/org.jetbrains.kotlin.jvm/org.jetbrains.kotlin.jvm.gradle.plugin
-    kotlin("jvm") version "2.2.21"
+    kotlin("jvm") version "2.3.21"
     // https://github.com/graalvm/native-build-tools/releases
-    id("org.graalvm.buildtools.native") version "0.11.4"
+    id("org.graalvm.buildtools.native") version "1.1.0"
     application
 }
 
@@ -18,13 +18,13 @@ repositories {
 
 dependencies {
     // https://mvnrepository.com/artifact/aws.sdk.kotlin/s3
-    val kotlinSdkVersion = "1.6.21"
+    val kotlinSdkVersion = "1.6.68"
 
     implementation("aws.sdk.kotlin:s3:$kotlinSdkVersion")
     implementation("aws.sdk.kotlin:s3control:$kotlinSdkVersion")
 
     // https://mvnrepository.com/artifact/aws.smithy.kotlin/http-client-engine-okhttp
-    implementation("aws.smithy.kotlin:http-client-engine-okhttp:1.6.4")
+    implementation("aws.smithy.kotlin:http-client-engine-okhttp:1.6.13")
 
     // https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-core
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
@@ -36,7 +36,7 @@ dependencies {
     implementation("io.github.oshai:kotlin-logging-jvm:7.0.14")
 
     // https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk18on
-    implementation("org.bouncycastle:bcprov-jdk18on:1.83")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.84")
 
     // https://mvnrepository.com/artifact/org.junit/junit-bom
     testImplementation(platform("org.junit:junit-bom:6.0.3"))
@@ -51,7 +51,7 @@ tasks.test {
 }
 
 kotlin {
-    jvmToolchain(24)
+    jvmToolchain(25)
 }
 
 application {
@@ -61,7 +61,7 @@ application {
 graalvmNative {
     binaries.all {
         javaLauncher.set(javaToolchains.launcherFor {
-            languageVersion.set(JavaLanguageVersion.of(24))
+            languageVersion.set(JavaLanguageVersion.of(25))
             vendor.set(JvmVendorSpec.GRAAL_VM)
         })
     }
