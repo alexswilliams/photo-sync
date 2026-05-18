@@ -1,5 +1,5 @@
 // https://gradle.org/releases/
-// ./gradlew wrapper --gradle-version=9.5.0 --distribution-type=BIN  && ./gradlew wrapper
+// ./gradlew wrapper --gradle-version=9.5.1 --distribution-type=BIN  && ./gradlew wrapper
 
 plugins {
     // https://mvnrepository.com/artifact/org.jetbrains.kotlin.jvm/org.jetbrains.kotlin.jvm.gradle.plugin
@@ -18,22 +18,22 @@ repositories {
 
 dependencies {
     // https://mvnrepository.com/artifact/aws.sdk.kotlin/s3
-    val kotlinSdkVersion = "1.6.68"
+    val kotlinSdkVersion = "1.6.75"
 
     implementation("aws.sdk.kotlin:s3:$kotlinSdkVersion")
     implementation("aws.sdk.kotlin:s3control:$kotlinSdkVersion")
 
     // https://mvnrepository.com/artifact/aws.smithy.kotlin/http-client-engine-okhttp
-    implementation("aws.smithy.kotlin:http-client-engine-okhttp:1.6.13")
+    implementation("aws.smithy.kotlin:http-client-engine-okhttp:1.6.14")
 
     // https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-core
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
     // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
-    runtimeOnly("org.slf4j:slf4j-simple:2.0.17")
+    runtimeOnly("org.slf4j:slf4j-simple:2.0.18")
 
     // https://mvnrepository.com/artifact/io.github.oshai/kotlin-logging-jvm
-    implementation("io.github.oshai:kotlin-logging-jvm:7.0.14")
+    implementation("io.github.oshai:kotlin-logging-jvm:8.0.02")
 
     // https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk18on
     implementation("org.bouncycastle:bcprov-jdk18on:1.84")
